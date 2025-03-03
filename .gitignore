@@ -1,0 +1,15 @@
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# Build files
+target/
+*.class
+*.jar
+
+# OS-specific
+.DS_Store
+
+# Logs and results
+allure-report/
+allure-results/
