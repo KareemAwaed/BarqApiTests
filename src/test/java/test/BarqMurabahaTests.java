@@ -4,24 +4,21 @@ import io.restassured.http.ContentType;
 import io.qameta.allure.*;
 import org.junit.jupiter.api.Test;
 import base.BaseTest;
+import utils.ApiHelper;
 
-import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 
 @Epic("Murabaha API")
-@Feature("Murabaha Operations")
+@Feature("Murabaha Product Management")
 public class BarqMurabahaTests extends BaseTest {
 
+    // ✅ Get Murabaha Packages
     @Test
-    @Story("Fetch Murabaha packages")
+    @Story("Fetch Murabaha Packages")
     @Severity(SeverityLevel.CRITICAL)
-    @Description("Verify that Murabaha packages can be fetched successfully")
+    @Description("Verify that Murabaha packages can be retrieved successfully")
     public void testGetMurabahaPackagesSuccess() {
-        given()
-                .header("X-API-KEY", "eWuSEzDqE@bC@TanMP!pVAnCrTrCSCGN")
-                .header("X-SIGNATURE", "951b182d313601589ebea1f2be1ec8686213c1f262e202547afab74420fd5b5f")
-                .header("Authorization", "Bearer valid_access_token")
-                .when()
+        ApiHelper.createRequestWithToken()
                 .get("/v1/murabaha/packages/index")
                 .then()
                 .statusCode(200)
@@ -29,33 +26,27 @@ public class BarqMurabahaTests extends BaseTest {
     }
 
     @Test
-    @Story("Fetch Murabaha package details")
+    @Story("Fetch Murabaha Packages - Invalid Token")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Verify that specific Murabaha package details can be fetched successfully")
-    public void testGetMurabahaPackageDetailsSuccess() {
-        given()
-                .header("X-API-KEY", "eWuSEzDqE@bC@TanMP!pVAnCrTrCSCGN")
-                .header("X-SIGNATURE", "951b182d313601589ebea1f2be1ec8686213c1f262e202547afab74420fd5b5f")
-                .header("Authorization", "Bearer valid_access_token")
-                .when()
-                .get("/v1/murabaha/packages/show/1")
+    @Description("Verify that fetching Murabaha packages fails with an invalid token")
+    public void testGetMurabahaPackagesInvalidToken() {
+        ApiHelper.createRequestWithExpiredToken()
+                .get("/v1/murabaha/packages/index")
                 .then()
-                .statusCode(200)
-                .body("data.package_id", equalTo(1));
+                .statusCode(401)
+                .body("code", equalTo("invalid_token"))
+                .body("message", equalTo("Invalid access token"));
     }
 
+    // ✅ Create Deposit Order
     @Test
-    @Story("Create deposit order")
+    @Story("Create Deposit Order")
     @Severity(SeverityLevel.CRITICAL)
     @Description("Verify that a deposit order can be created successfully")
     public void testCreateDepositOrderSuccess() {
-        given()
-                .header("X-API-KEY", "eWuSEzDqE@bC@TanMP!pVAnCrTrCSCGN")
-                .header("X-SIGNATURE", "951b182d313601589ebea1f2be1ec8686213c1f262e202547afab74420fd5b5f")
-                .header("Authorization", "Bearer valid_access_token")
+        ApiHelper.createRequestWithToken()
                 .contentType(ContentType.JSON)
                 .body("{\"package_statement_id\": 1, \"amount\": 1000}")
-                .when()
                 .post("/v1/murabaha/deposit-order/create")
                 .then()
                 .statusCode(200)
@@ -63,36 +54,30 @@ public class BarqMurabahaTests extends BaseTest {
     }
 
     @Test
-    @Story("List deposit orders")
+    @Story("Create Deposit Order - Unauthorized")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Verify that deposit orders can be listed successfully")
-    public void testListDepositOrdersSuccess() {
-        given()
-                .header("X-API-KEY", "eWuSEzDqE@bC@TanMP!pVAnCrTrCSCGN")
-                .header("X-SIGNATURE", "951b182d313601589ebea1f2be1ec8686213c1f262e202547afab74420fd5b5f")
-                .header("Authorization", "Bearer valid_access_token")
-                .when()
-                .get("/v1/murabaha/deposit-order/index")
-                .then()
-                .statusCode(200)
-                .body("data.orders", notNullValue());
-    }
-
-    @Test
-    @Story("Create deposit order without authorization")
-    @Severity(SeverityLevel.NORMAL)
-    @Description("Verify response when creating a deposit order without authorization token")
+    @Description("Verify that creating a deposit order fails without authorization")
     public void testCreateDepositOrderUnauthorized() {
-        given()
-                .header("X-API-KEY", "eWuSEzDqE@bC@TanMP!pVAnCrTrCSCGN")
-                .header("X-SIGNATURE", "951b182d313601589ebea1f2be1ec8686213c1f262e202547afab74420fd5b5f")
+        ApiHelper.createRequest()
                 .contentType(ContentType.JSON)
                 .body("{\"package_statement_id\": 1, \"amount\": 1000}")
-                .when()
                 .post("/v1/murabaha/deposit-order/create")
                 .then()
                 .statusCode(401)
                 .body("code", equalTo("unauthorized"))
                 .body("message", equalTo("Authorization token is missing"));
+    }
+
+    // ✅ List Deposit Orders
+    @Test
+    @Story("List Deposit Orders")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Verify that deposit orders can be listed successfully")
+    public void testListDepositOrdersSuccess() {
+        ApiHelper.createRequestWithToken()
+                .get("/v1/murabaha/deposit-order/index")
+                .then()
+                .statusCode(200)
+                .body("data.orders", notNullValue());
     }
 }

@@ -4,41 +4,34 @@ import io.restassured.http.ContentType;
 import io.qameta.allure.*;
 import org.junit.jupiter.api.Test;
 import base.BaseTest;
-;
+import utils.ApiHelper;
 
-import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 
 @Epic("Profile API")
 @Feature("User Profile Management")
 public class BarqProfileTests extends BaseTest {
 
+    // ✅ Fetch User Profile
     @Test
-    @Story("Fetch user profile")
+    @Story("Fetch User Profile")
     @Severity(SeverityLevel.CRITICAL)
-    @Description("Verify that user profile data can be fetched successfully")
+    @Description("Verify that the user's profile can be fetched successfully")
     public void testFetchUserProfileSuccess() {
-        given()
-                .header("X-API-KEY", "eWuSEzDqE@bC@TanMP!pVAnCrTrCSCGN")
-                .header("X-SIGNATURE", "951b182d313601589ebea1f2be1ec8686213c1f262e202547afab74420fd5b5f")
-                .header("Authorization", "Bearer valid_access_token")
-                .when()
+        ApiHelper.createRequestWithToken()
                 .get("/v1/profile")
                 .then()
                 .statusCode(200)
-                .body("data.user_id", notNullValue());
+                .body("data.user_id", notNullValue())
+                .body("data.full_name", notNullValue());
     }
 
     @Test
-    @Story("Handle invalid access token")
+    @Story("Fetch User Profile - Invalid Token")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Verify response when an invalid access token is used to fetch the profile")
+    @Description("Verify that profile fetch fails with an invalid token")
     public void testFetchUserProfileInvalidToken() {
-        given()
-                .header("X-API-KEY", "eWuSEzDqE@bC@TanMP!pVAnCrTrCSCGN")
-                .header("X-SIGNATURE", "951b182d313601589ebea1f2be1ec8686213c1f262e202547afab74420fd5b5f")
-                .header("Authorization", "Bearer invalid_access_token")
-                .when()
+        ApiHelper.createRequestWithExpiredToken()
                 .get("/v1/profile")
                 .then()
                 .statusCode(401)
@@ -46,18 +39,15 @@ public class BarqProfileTests extends BaseTest {
                 .body("message", equalTo("Invalid access token"));
     }
 
+    // ✅ Accept Terms and Conditions
     @Test
-    @Story("Accept terms and conditions")
-    @Severity(SeverityLevel.CRITICAL)
-    @Description("Verify that terms and conditions can be accepted successfully")
+    @Story("Accept Terms and Conditions")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Verify that users can accept terms and conditions")
     public void testAcceptTermsSuccess() {
-        given()
-                .header("X-API-KEY", "eWuSEzDqE@bC@TanMP!pVAnCrTrCSCGN")
-                .header("X-SIGNATURE", "951b182d313601589ebea1f2be1ec8686213c1f262e202547afab74420fd5b5f")
-                .header("Authorization", "Bearer valid_access_token")
+        ApiHelper.createRequestWithToken()
                 .contentType(ContentType.JSON)
                 .body("{\"accepted\": true, \"version\": \"1.1\"}")
-                .when()
                 .post("/v1/profile/terms")
                 .then()
                 .statusCode(200)
@@ -65,16 +55,13 @@ public class BarqProfileTests extends BaseTest {
     }
 
     @Test
-    @Story("Accept terms without authorization")
+    @Story("Accept Terms - Unauthorized")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Verify response when accepting terms without an authorization token")
+    @Description("Verify that accepting terms fails without authorization")
     public void testAcceptTermsUnauthorized() {
-        given()
-                .header("X-API-KEY", "eWuSEzDqE@bC@TanMP!pVAnCrTrCSCGN")
-                .header("X-SIGNATURE", "951b182d313601589ebea1f2be1ec8686213c1f262e202547afab74420fd5b5f")
+        ApiHelper.createRequest()
                 .contentType(ContentType.JSON)
                 .body("{\"accepted\": true, \"version\": \"1.1\"}")
-                .when()
                 .post("/v1/profile/terms")
                 .then()
                 .statusCode(401)

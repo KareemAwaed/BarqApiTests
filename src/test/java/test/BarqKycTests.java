@@ -4,25 +4,21 @@ import io.restassured.http.ContentType;
 import io.qameta.allure.*;
 import org.junit.jupiter.api.Test;
 import base.BaseTest;
-;
+import utils.ApiHelper;
 
-import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 
-@Epic("Profile API")
-@Feature("KYC Management")
+@Epic("KYC API")
+@Feature("Know Your Customer (KYC) Management")
 public class BarqKycTests extends BaseTest {
 
+    // ✅ Get KYC Questions
     @Test
-    @Story("Retrieve KYC questions")
+    @Story("Fetch KYC Questions")
     @Severity(SeverityLevel.CRITICAL)
     @Description("Verify that KYC questions can be retrieved successfully")
     public void testGetKycQuestionsSuccess() {
-        given()
-                .header("X-API-KEY", "eWuSEzDqE@bC@TanMP!pVAnCrTrCSCGN")
-                .header("X-SIGNATURE", "951b182d313601589ebea1f2be1ec8686213c1f262e202547afab74420fd5b5f")
-                .header("Authorization", "Bearer valid_access_token")
-                .when()
+        ApiHelper.createRequestWithToken()
                 .get("/v1/profile/retail-kyc")
                 .then()
                 .statusCode(200)
@@ -30,15 +26,11 @@ public class BarqKycTests extends BaseTest {
     }
 
     @Test
-    @Story("Handle invalid access token")
+    @Story("Fetch KYC Questions - Invalid Token")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Verify response when an invalid access token is used")
+    @Description("Verify that fetching KYC questions fails with an invalid token")
     public void testGetKycQuestionsInvalidToken() {
-        given()
-                .header("X-API-KEY", "eWuSEzDqE@bC@TanMP!pVAnCrTrCSCGN")
-                .header("X-SIGNATURE", "951b182d313601589ebea1f2be1ec8686213c1f262e202547afab74420fd5b5f")
-                .header("Authorization", "Bearer invalid_access_token")
-                .when()
+        ApiHelper.createRequestWithExpiredToken()
                 .get("/v1/profile/retail-kyc")
                 .then()
                 .statusCode(401)
@@ -46,18 +38,15 @@ public class BarqKycTests extends BaseTest {
                 .body("message", equalTo("Invalid access token"));
     }
 
+    // ✅ Submit KYC Answers
     @Test
-    @Story("Submit KYC answers")
+    @Story("Submit KYC Answers")
     @Severity(SeverityLevel.CRITICAL)
-    @Description("Verify that KYC answers can be submitted successfully")
+    @Description("Verify that users can submit KYC answers successfully")
     public void testSubmitKycAnswersSuccess() {
-        given()
-                .header("X-API-KEY", "eWuSEzDqE@bC@TanMP!pVAnCrTrCSCGN")
-                .header("X-SIGNATURE", "951b182d313601589ebea1f2be1ec8686213c1f262e202547afab74420fd5b5f")
-                .header("Authorization", "Bearer valid_access_token")
+        ApiHelper.createRequestWithToken()
                 .contentType(ContentType.JSON)
                 .body("{\"answers\": [{\"question_id\": 1, \"answer\": \"Yes\"}, {\"question_id\": 2, \"answer\": \"No\"}]}")
-                .when()
                 .post("/v1/profile/retail-kyc")
                 .then()
                 .statusCode(200)
@@ -65,16 +54,13 @@ public class BarqKycTests extends BaseTest {
     }
 
     @Test
-    @Story("Submit KYC answers without authorization")
+    @Story("Submit KYC Answers - Unauthorized")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Verify response when submitting KYC answers without an authorization token")
+    @Description("Verify that submitting KYC answers fails without authorization")
     public void testSubmitKycAnswersUnauthorized() {
-        given()
-                .header("X-API-KEY", "eWuSEzDqE@bC@TanMP!pVAnCrTrCSCGN")
-                .header("X-SIGNATURE", "951b182d313601589ebea1f2be1ec8686213c1f262e202547afab74420fd5b5f")
+        ApiHelper.createRequest()
                 .contentType(ContentType.JSON)
                 .body("{\"answers\": [{\"question_id\": 1, \"answer\": \"Yes\"}, {\"question_id\": 2, \"answer\": \"No\"}]}")
-                .when()
                 .post("/v1/profile/retail-kyc")
                 .then()
                 .statusCode(401)

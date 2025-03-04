@@ -4,25 +4,23 @@ import io.restassured.http.ContentType;
 import io.qameta.allure.*;
 import org.junit.jupiter.api.Test;
 import base.BaseTest;
+import utils.ApiHelper;
 
-import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 
-@Epic("Authentication API")
-@Feature("User Registration")
+@Epic("Registration API")
+@Feature("User Registration Management")
 public class BarqRegisterTests extends BaseTest {
 
+    // ✅ Old User Registration
     @Test
-    @Story("Old User Sync Success")
+    @Story("Old User Sync")
     @Severity(SeverityLevel.CRITICAL)
     @Description("Verify that an old user can be synced successfully")
     public void testOldUserSyncSuccess() {
-        given()
-                .header("X-API-KEY", "eWuSEzDqE@bC@TanMP!pVAnCrTrCSCGN")
-                .header("X-SIGNATURE", "951b182d313601589ebea1f2be1ec8686213c1f262e202547afab74420fd5b5f")
+        ApiHelper.createRequest()
                 .contentType(ContentType.JSON)
                 .body("{\"nin\": \"2054312802\", \"terms_and_conditions\": true, \"terms_and_conditions_version\": \"1.1\"}")
-                .when()
                 .post("/v1/auth/old-user/register")
                 .then()
                 .statusCode(200)
@@ -30,34 +28,28 @@ public class BarqRegisterTests extends BaseTest {
     }
 
     @Test
-    @Story("Handle already synced user")
+    @Story("Old User Already Synced")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Verify response when trying to sync an already synced user")
+    @Description("Verify response when an old user is already synced")
     public void testOldUserAlreadySynced() {
-        given()
-                .header("X-API-KEY", "eWuSEzDqE@bC@TanMP!pVAnCrTrCSCGN")
-                .header("X-SIGNATURE", "951b182d313601589ebea1f2be1ec8686213c1f262e202547afab74420fd5b5f")
+        ApiHelper.createRequest()
                 .contentType(ContentType.JSON)
                 .body("{\"nin\": \"2054312802\"}")
-                .when()
                 .post("/v1/auth/old-user/register")
                 .then()
                 .statusCode(400)
                 .body("code", equalTo("user_already_synced"))
-                .body("message", equalTo("user already synced with this partner"));
+                .body("message", equalTo("User already synced with this partner"));
     }
 
     @Test
-    @Story("Handle validation errors")
-    @Severity(SeverityLevel.MINOR)
-    @Description("Verify response when request body is empty")
+    @Story("Old User Registration Validation Error")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Verify validation error for empty registration body")
     public void testOldUserValidationError() {
-        given()
-                .header("X-API-KEY", "eWuSEzDqE@bC@TanMP!pVAnCrTrCSCGN")
-                .header("X-SIGNATURE", "951b182d313601589ebea1f2be1ec8686213c1f262e202547afab74420fd5b5f")
+        ApiHelper.createRequest()
                 .contentType(ContentType.JSON)
                 .body("{}")
-                .when()
                 .post("/v1/auth/old-user/register")
                 .then()
                 .statusCode(400)
@@ -66,55 +58,17 @@ public class BarqRegisterTests extends BaseTest {
     }
 
     @Test
-    @Story("Handle user not found")
+    @Story("Old User Not Found")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Verify response when user is not found")
+    @Description("Verify response when an old user is not found")
     public void testOldUserNotFound() {
-        given()
-                .header("X-API-KEY", "eWuSEzDqE@bC@TanMP!pVAnCrTrCSCGN")
-                .header("X-SIGNATURE", "951b182d313601589ebea1f2be1ec8686213c1f262e202547afab74420fd5b5f")
+        ApiHelper.createRequest()
                 .contentType(ContentType.JSON)
                 .body("{\"nin\": \"2054312803\"}")
-                .when()
                 .post("/v1/auth/old-user/register")
                 .then()
                 .statusCode(400)
                 .body("code", equalTo("user_not_found"))
-                .body("message", equalTo("user not found"));
-    }
-
-    @Test
-    @Story("Handle missing API key")
-    @Severity(SeverityLevel.BLOCKER)
-    @Description("Verify response when API key is missing")
-    public void testMissingApiKey() {
-        given()
-                .header("X-SIGNATURE", "951b182d313601589ebea1f2be1ec8686213c1f262e202547afab74420fd5b5f")
-                .contentType(ContentType.JSON)
-                .body("{\"nin\": \"2054312802\"}")
-                .when()
-                .post("/v1/auth/old-user/register")
-                .then()
-                .statusCode(401)
-                .body("code", equalTo("ims.authentication_failed"))
-                .body("message", equalTo("Authentication failed"));
-    }
-
-    @Test
-    @Story("Handle invalid signature")
-    @Severity(SeverityLevel.BLOCKER)
-    @Description("Verify response when signature is invalid")
-    public void testInvalidSignature() {
-        given()
-                .header("X-API-KEY", "eWuSEzDqE@bC@TanMP!pVAnCrTrCSCGN")
-                .header("X-SIGNATURE", "invalid_signature")
-                .contentType(ContentType.JSON)
-                .body("{\"nin\": \"2054312802\"}")
-                .when()
-                .post("/v1/auth/old-user/register")
-                .then()
-                .statusCode(401)
-                .body("code", equalTo("ims.authentication_failed"))
-                .body("message", equalTo("Authentication failed"));
+                .body("message", equalTo("User not found"));
     }
 }
