@@ -9,97 +9,120 @@ import utils.ApiHelper;
 import static org.hamcrest.Matchers.*;
 
 @Epic("Authentication API")
-@Feature("User Authentication & Token Management")
+@Feature("User Authentication")
 public class BarqAuthTests extends BaseTest {
 
-    // ✅ Login Tests
+    // ✅ Check Existing User
     @Test
-    @Story("User Login")
+    @Story("Check existing user")
     @Severity(SeverityLevel.CRITICAL)
-    @Description("Verify successful login")
-    public void testLoginSuccess() {
+    @Description("Verify that an existing user can be checked successfully")
+    public void testExistingUser() {
         ApiHelper.createRequest()
-                .body("{\"username\": \"testuser\", \"password\": \"password123\"}")
-                .post("/v1/auth/login")
+                .contentType(ContentType.JSON)
+                .body("{\"nin\": \"2054312802\", \"mobile\": \"+966538772716\"}")
+                .post("/v1/auth/check-user")
                 .then()
                 .statusCode(200)
-                .body("access_token", notNullValue());
+                .body("code", equalTo("existing_account"))
+                .body("data.exist", equalTo(true))
+                .body("message", equalTo("User already exists."));
     }
 
+    // 🚫 Missing API Key
     @Test
-    @Story("User Login - Invalid Credentials")
-    @Severity(SeverityLevel.BLOCKER)
-    @Description("Verify login fails with invalid credentials")
-    public void testLoginInvalidCredentials() {
-        ApiHelper.createRequest()
-                .body("{\"username\": \"invalid\", \"password\": \"wrongpass\"}")
-                .post("/v1/auth/login")
-                .then()
-                .statusCode(401)
-                .body("message", equalTo("Invalid username or password"));
-    }
-
-    @Test
-    @Story("User Login - Missing API Key")
-    @Severity(SeverityLevel.CRITICAL)
-    @Description("Verify login fails when API key is missing")
-    public void testLoginMissingApiKey() {
+    @Story("Handle missing API key")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Verify response when API key is missing")
+    public void testMissingApiKey() {
         ApiHelper.createRequestWithoutApiKey()
-                .body("{\"username\": \"testuser\", \"password\": \"password123\"}")
-                .post("/v1/auth/login")
+                .contentType(ContentType.JSON)
+                .body("{\"nin\": \"2054312802\", \"mobile\": \"+966538772716\"}")
+                .post("/v1/auth/check-user")
                 .then()
                 .statusCode(401)
-                .body("message", equalTo("API key is missing"));
+                .body("code", equalTo("ims.authentication_failed"))
+                .body("message", equalTo("Authentication failed"));
     }
 
+    // 🚫 Invalid Signature
     @Test
-    @Story("User Login - Expired Token")
+    @Story("Handle invalid signature")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Verify response when signature is invalid")
+    public void testInvalidSignature() {
+        ApiHelper.createRequestWithInvalidSignature()
+                .contentType(ContentType.JSON)
+                .body("{\"nin\": \"2054312802\", \"mobile\": \"+966538772716\"}")
+                .post("/v1/auth/check-user")
+                .then()
+                .statusCode(401)
+                .body("code", equalTo("ims.authentication_failed"))
+                .body("message", equalTo("Authentication failed"));
+    }
+
+    // 🚫 Missing NIN and Mobile
+    @Test
+    @Story("Check User - Missing Fields")
     @Severity(SeverityLevel.CRITICAL)
-    @Description("Verify login fails with expired token")
-    public void testLoginExpiredToken() {
-        ApiHelper.createRequestWithExpiredToken()
-                .post("/v1/auth/login")
+    @Description("Verify response when NIN and mobile are missing")
+    public void testCheckUserMissingFields() {
+        ApiHelper.createRequest()
+                .contentType(ContentType.JSON)
+                .body("{}")
+                .post("/v1/auth/check-user")
                 .then()
-                .statusCode(401)
-                .body("message", equalTo("Token has expired"));
+                .statusCode(400)
+                .body("code", equalTo("invalid_data"))
+                .body("message", equalTo("nin and mobile are required"));
     }
 
-    // ✅ Token Management Tests
+    // 🟠 Invalid NIN Format
     @Test
-    @Story("Token Refresh")
+    @Story("Check User - Invalid NIN Format")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Verify token can be refreshed")
-    public void testRefreshTokenSuccess() {
+    @Description("Verify response when NIN is invalid format")
+    public void testCheckUserInvalidNinFormat() {
         ApiHelper.createRequest()
-                .body("{\"refresh_token\": \"valid_refresh_token\"}")
-                .post("/v1/auth/refresh-token")
+                .contentType(ContentType.JSON)
+                .body("{\"nin\": \"abc123\", \"mobile\": \"+966538772716\"}")
+                .post("/v1/auth/check-user")
+                .then()
+                .statusCode(400)
+                .body("code", equalTo("invalid_nin_format"))
+                .body("message", equalTo("NIN must be numeric and 10 digits"));
+    }
+
+    // 🟠 Invalid Mobile Format
+    @Test
+    @Story("Check User - Invalid Mobile Format")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Verify response when mobile number format is invalid")
+    public void testCheckUserInvalidMobileFormat() {
+        ApiHelper.createRequest()
+                .contentType(ContentType.JSON)
+                .body("{\"nin\": \"2054312802\", \"mobile\": \"123456\"}")
+                .post("/v1/auth/check-user")
+                .then()
+                .statusCode(400)
+                .body("code", equalTo("invalid_mobile_format"))
+                .body("message", equalTo("Mobile number must start with +9665 and be 13 digits long"));
+    }
+
+    // 🧩 Verify Response Structure
+    @Test
+    @Story("Verify response structure")
+    @Severity(SeverityLevel.MINOR)
+    @Description("Ensure the response structure matches the expected format")
+    public void testResponseStructure() {
+        ApiHelper.createRequest()
+                .contentType(ContentType.JSON)
+                .body("{\"nin\": \"2054312802\", \"mobile\": \"+966538772716\"}")
+                .post("/v1/auth/check-user")
                 .then()
                 .statusCode(200)
-                .body("access_token", notNullValue());
-    }
-
-    @Test
-    @Story("Token Refresh - Invalid Session")
-    @Severity(SeverityLevel.NORMAL)
-    @Description("Verify token refresh fails with invalid session ID")
-    public void testRefreshTokenInvalidSession() {
-        ApiHelper.createRequest()
-                .body("{\"refresh_token\": \"invalid_token\"}")
-                .post("/v1/auth/refresh-token")
-                .then()
-                .statusCode(401)
-                .body("message", equalTo("Invalid session ID"));
-    }
-
-    @Test
-    @Story("Logout")
-    @Severity(SeverityLevel.NORMAL)
-    @Description("Verify user logout invalidates the token")
-    public void testLogoutSuccess() {
-        ApiHelper.createRequestWithToken()
-                .post("/v1/auth/logout")
-                .then()
-                .statusCode(200)
-                .body("message", equalTo("Logged out successfully"));
+                .body("code", notNullValue())
+                .body("data", notNullValue())
+                .body("message", notNullValue());
     }
 }
