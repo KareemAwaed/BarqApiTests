@@ -1,0 +1,14 @@
+{
+  "valid_user": {
+    "phone_number": "+966538772716",
+    "password": "1111",
+    "nin": "2054312802",
+    "dob": "1404-11-29"
+  },
+  "invalid_user": {
+    "phone_number": "+966512345678",
+    "password": "wrong_password",
+    "nin": "1234567890",
+    "dob": "1990-01-01"
+  }
+}

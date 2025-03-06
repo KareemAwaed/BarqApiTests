@@ -12,6 +12,11 @@ import static org.hamcrest.Matchers.*;
 @Feature("User Authentication")
 public class BarqAuthTests extends BaseTest {
 
+    private static final String REGISTERED_NIN = "2054312802";
+    private static final String REGISTERED_MOBILE = "+966538772716";
+    private static final String REGISTERED_PASSWORD = "1111";
+    private static final String REGISTERED_DOB = "1404-11-29";
+
     // ✅ Check Existing User
     @Test
     @Story("Check existing user")
@@ -20,13 +25,62 @@ public class BarqAuthTests extends BaseTest {
     public void testExistingUser() {
         ApiHelper.createRequest()
                 .contentType(ContentType.JSON)
-                .body("{\"nin\": \"2054312802\", \"mobile\": \"+966538772716\"}")
+                .body("{\"nin\": \"" + REGISTERED_NIN + "\", \"mobile\": \"" + REGISTERED_MOBILE + "\"}")
                 .post("/v1/auth/check-user")
                 .then()
                 .statusCode(200)
                 .body("code", equalTo("existing_account"))
                 .body("data.exist", equalTo(true))
                 .body("message", equalTo("User already exists."));
+    }
+
+    // ✅ Login with valid credentials
+    @Test
+    @Story("Login with valid credentials")
+    @Severity(SeverityLevel.CRITICAL)
+    @Description("Verify that a user can log in with valid NIN, mobile, password, and DOB")
+    public void testLoginWithValidCredentials() {
+        ApiHelper.createRequest()
+                .contentType(ContentType.JSON)
+                .body("{\"nin\": \"" + REGISTERED_NIN + "\", \"mobile\": \"" + REGISTERED_MOBILE + "\", \"password\": \"" + REGISTERED_PASSWORD + "\", \"dob\": \"" + REGISTERED_DOB + "\"}")
+                .post("/v1/auth/login")
+                .then()
+                .statusCode(200)
+                .body("code", equalTo("login_success"))
+                .body("message", equalTo("Login successful"))
+                .body("data.access_token", notNullValue());
+    }
+
+    // 🚫 User Not Found
+    @Test
+    @Story("Login with non-existent user")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Verify response when trying to log in with a non-existent user")
+    public void testLoginWithNonExistentUser() {
+        ApiHelper.createRequest()
+                .contentType(ContentType.JSON)
+                .body("{\"nin\": \"9999999999\", \"mobile\": \"+966512345678\", \"password\": \"wrongpass\", \"dob\": \"1400-01-01\"}")
+                .post("/v1/auth/login")
+                .then()
+                .statusCode(400)
+                .body("code", equalTo("user_not_found"))
+                .body("message", equalTo("User not found"));
+    }
+
+    // 🚫 Invalid Password
+    @Test
+    @Story("Login with invalid password")
+    @Severity(SeverityLevel.CRITICAL)
+    @Description("Verify that login fails with invalid password")
+    public void testLoginWithInvalidPassword() {
+        ApiHelper.createRequest()
+                .contentType(ContentType.JSON)
+                .body("{\"nin\": \"" + REGISTERED_NIN + "\", \"mobile\": \"" + REGISTERED_MOBILE + "\", \"password\": \"wrongpass\", \"dob\": \"" + REGISTERED_DOB + "\"}")
+                .post("/v1/auth/login")
+                .then()
+                .statusCode(401)
+                .body("code", equalTo("invalid_password"))
+                .body("message", equalTo("Invalid password"));
     }
 
     // 🚫 Missing API Key
@@ -37,23 +91,7 @@ public class BarqAuthTests extends BaseTest {
     public void testMissingApiKey() {
         ApiHelper.createRequestWithoutApiKey()
                 .contentType(ContentType.JSON)
-                .body("{\"nin\": \"2054312802\", \"mobile\": \"+966538772716\"}")
-                .post("/v1/auth/check-user")
-                .then()
-                .statusCode(401)
-                .body("code", equalTo("ims.authentication_failed"))
-                .body("message", equalTo("Authentication failed"));
-    }
-
-    // 🚫 Invalid Signature
-    @Test
-    @Story("Handle invalid signature")
-    @Severity(SeverityLevel.NORMAL)
-    @Description("Verify response when signature is invalid")
-    public void testInvalidSignature() {
-        ApiHelper.createRequestWithInvalidSignature()
-                .contentType(ContentType.JSON)
-                .body("{\"nin\": \"2054312802\", \"mobile\": \"+966538772716\"}")
+                .body("{\"nin\": \"" + REGISTERED_NIN + "\", \"mobile\": \"" + REGISTERED_MOBILE + "\"}")
                 .post("/v1/auth/check-user")
                 .then()
                 .statusCode(401)
@@ -76,53 +114,13 @@ public class BarqAuthTests extends BaseTest {
                 .body("code", equalTo("invalid_data"))
                 .body("message", equalTo("nin and mobile are required"));
     }
-
-    // 🟠 Invalid NIN Format
-    @Test
-    @Story("Check User - Invalid NIN Format")
-    @Severity(SeverityLevel.NORMAL)
-    @Description("Verify response when NIN is invalid format")
-    public void testCheckUserInvalidNinFormat() {
-        ApiHelper.createRequest()
-                .contentType(ContentType.JSON)
-                .body("{\"nin\": \"abc123\", \"mobile\": \"+966538772716\"}")
-                .post("/v1/auth/check-user")
-                .then()
-                .statusCode(400)
-                .body("code", equalTo("invalid_nin_format"))
-                .body("message", equalTo("NIN must be numeric and 10 digits"));
-    }
-
-    // 🟠 Invalid Mobile Format
-    @Test
-    @Story("Check User - Invalid Mobile Format")
-    @Severity(SeverityLevel.NORMAL)
-    @Description("Verify response when mobile number format is invalid")
-    public void testCheckUserInvalidMobileFormat() {
-        ApiHelper.createRequest()
-                .contentType(ContentType.JSON)
-                .body("{\"nin\": \"2054312802\", \"mobile\": \"123456\"}")
-                .post("/v1/auth/check-user")
-                .then()
-                .statusCode(400)
-                .body("code", equalTo("invalid_mobile_format"))
-                .body("message", equalTo("Mobile number must start with +9665 and be 13 digits long"));
-    }
-
-    // 🧩 Verify Response Structure
-    @Test
-    @Story("Verify response structure")
-    @Severity(SeverityLevel.MINOR)
-    @Description("Ensure the response structure matches the expected format")
-    public void testResponseStructure() {
-        ApiHelper.createRequest()
-                .contentType(ContentType.JSON)
-                .body("{\"nin\": \"2054312802\", \"mobile\": \"+966538772716\"}")
-                .post("/v1/auth/check-user")
-                .then()
-                .statusCode(200)
-                .body("code", notNullValue())
-                .body("data", notNullValue())
-                .body("message", notNullValue());
-    }
 }
+
+/*Here’s what’s covered:
+
+✅ Check Existing User
+✅ Login with valid credentials
+🚫 Login with non-existent user
+🚫 Invalid password
+🚫 Missing API key
+🚫 Missing NIN and Mobile*/

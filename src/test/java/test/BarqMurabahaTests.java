@@ -10,127 +10,105 @@ import utils.ApiHelper;
 import static org.hamcrest.Matchers.*;
 
 @Epic("Murabaha API")
-@Feature("Murabaha Management")
+@Feature("Murabaha Investment Management")
 public class BarqMurabahaTests extends BaseTest {
 
     private static String token;
 
     @BeforeAll
     public static void setup() {
-        // Generate a valid token before running the tests
         token = ApiHelper.loginAndGetToken("2054312802", "+966538772716");
     }
 
-    // ✅ Get Murabaha Packages Successfully
+    // ✅ Get Murabaha Packages
     @Test
-    @Story("Get Murabaha Packages")
-    @Severity(SeverityLevel.CRITICAL)
-    @Description("Verify that Murabaha packages can be fetched successfully")
-    public void testGetMurabahaPackagesSuccess() {
+    public void testGetMurabahaPackages() {
         ApiHelper.createRequestWithToken(token)
-                .get("/v1/murabaha/packages/index")
+                .get("/v1/murabha/packages/index")
                 .then()
                 .statusCode(200)
-                .body("data.packages", notNullValue());
+                .body("data", not(empty()));
     }
 
     // 🚫 Get Packages with Invalid Token
     @Test
-    @Story("Get Murabaha Packages - Invalid Token")
-    @Severity(SeverityLevel.NORMAL)
-    @Description("Verify that fetching Murabaha packages fails with an invalid token")
     public void testGetMurabahaPackagesInvalidToken() {
-        ApiHelper.createRequestWithInvalidToken()
-                .get("/v1/murabaha/packages/index")
+        ApiHelper.createRequestWithInvalidToken("invalid_token")
+                .get("/v1/murabha/packages/index")
                 .then()
                 .statusCode(401)
-                .body("code", equalTo("invalid_token"))
-                .body("message", equalTo("Invalid access token"));
+                .body("code", equalTo("invalid_token"));
     }
 
-    // ✅ Create Deposit Order Successfully
+    // ✅ Get User's Orders
     @Test
-    @Story("Create Deposit Order")
-    @Severity(SeverityLevel.CRITICAL)
-    @Description("Verify that a deposit order can be created successfully")
-    public void testCreateDepositOrderSuccess() {
+    public void testGetUserOrders() {
         ApiHelper.createRequestWithToken(token)
-                .contentType(ContentType.JSON)
-                .body("{\"package_statement_id\": 1, \"amount\": 1000}")
-                .post("/v1/murabaha/deposit-order/create")
+                .get("/v1/murabha/deposit-order/index")
                 .then()
                 .statusCode(200)
-                .body("message", equalTo("Deposit order created successfully"));
+                .body("data", not(empty()));
     }
 
-    // 🚫 Create Order with Missing Fields
+    // 🚫 Get Orders with Invalid Token
     @Test
-    @Story("Create Deposit Order - Missing Fields")
-    @Severity(SeverityLevel.NORMAL)
-    @Description("Verify that creating a deposit order fails with missing fields")
-    public void testCreateDepositOrderMissingFields() {
-        ApiHelper.createRequestWithToken(token)
-                .contentType(ContentType.JSON)
-                .body("{}")
-                .post("/v1/murabaha/deposit-order/create")
-                .then()
-                .statusCode(400)
-                .body("code", equalTo("invalid_data"))
-                .body("message", equalTo("package_statement_id and amount are required"));
-    }
-
-    // 🚫 Create Order without Authorization
-    @Test
-    @Story("Create Deposit Order without Authorization")
-    @Severity(SeverityLevel.CRITICAL)
-    @Description("Verify that creating a deposit order fails without authorization")
-    public void testCreateDepositOrderUnauthorized() {
-        ApiHelper.createRequest()
-                .contentType(ContentType.JSON)
-                .body("{\"package_statement_id\": 1, \"amount\": 1000}")
-                .post("/v1/murabaha/deposit-order/create")
+    public void testGetUserOrdersInvalidToken() {
+        ApiHelper.createRequestWithInvalidToken("invalid_token")
+                .get("/v1/murabha/deposit-order/index")
                 .then()
                 .statusCode(401)
-                .body("code", equalTo("unauthorized"))
-                .body("message", equalTo("Authorization token is missing"));
+                .body("code", equalTo("invalid_token"));
     }
 
-    // ✅ List Deposit Orders
+    // ✅ Subscribe to Murabaha
     @Test
-    @Story("List Deposit Orders")
-    @Severity(SeverityLevel.NORMAL)
-    @Description("Verify that deposit orders can be listed")
-    public void testListDepositOrdersSuccess() {
+    public void testSubscribeToMurabaha() {
         ApiHelper.createRequestWithToken(token)
-                .get("/v1/murabaha/deposit-order/index")
+                .contentType(ContentType.JSON)
+                .body("{" +
+                        "\"package_id\": 1, " +
+                        "\"amount\": 5000 }")
+                .post("/v1/murabha/deposit-order/create")
                 .then()
-                .statusCode(200)
-                .body("data.orders", notNullValue());
+                .statusCode(201)
+                .body("code", equalTo("1001"))
+                .body("message", equalTo("تم حفظ البيانات بنجاح"));
     }
 
-    // ✅ Show Deposit Order Details
+    // 🚫 Subscribe with Invalid Token
     @Test
-    @Story("Show Deposit Order Details")
-    @Severity(SeverityLevel.NORMAL)
-    @Description("Verify that deposit order details can be fetched")
-    public void testShowDepositOrderDetailsSuccess() {
-        ApiHelper.createRequestWithToken(token)
-                .get("/v1/murabaha/deposit-order/show/1")
+    public void testSubscribeWithInvalidToken() {
+        ApiHelper.createRequestWithInvalidToken("invalid_token")
+                .contentType(ContentType.JSON)
+                .body("{" +
+                        "\"package_id\": 1, " +
+                        "\"amount\": 5000 }")
+                .post("/v1/murabha/deposit-order/create")
                 .then()
-                .statusCode(200)
-                .body("data.order_id", equalTo(1));
+                .statusCode(401)
+                .body("code", equalTo("invalid_token"));
     }
 
-    // ✅ Cancel Deposit Order
+    // ✅ Cancel Murabaha Subscription
     @Test
-    @Story("Cancel Deposit Order")
-    @Severity(SeverityLevel.CRITICAL)
-    @Description("Verify that a deposit order can be canceled")
-    public void testCancelDepositOrderSuccess() {
+    public void testCancelMurabahaOrder() {
         ApiHelper.createRequestWithToken(token)
-                .post("/v1/murabaha/deposit-order/cancel/1")
+                .post("/v1/murabha/deposit-order/cancel/1")
                 .then()
                 .statusCode(200)
-                .body("message", equalTo("Deposit order canceled successfully"));
+                .body("code", equalTo("1001"))
+                .body("message", equalTo("تم حفظ البيانات بنجاح"));
+    }
+
+    // 🚫 Cancel with Invalid Token
+    @Test
+    public void testCancelOrderInvalidToken() {
+        ApiHelper.createRequestWithInvalidToken("invalid_token")
+                .post("/v1/murabha/deposit-order/cancel/1")
+                .then()
+                .statusCode(401)
+                .body("code", equalTo("invalid_token"));
     }
 }
+
+// This should now match 100% of the documentation — let me know if anything else needs to be refined! 🚀

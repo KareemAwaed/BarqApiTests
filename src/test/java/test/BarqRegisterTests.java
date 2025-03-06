@@ -10,125 +10,104 @@ import utils.ApiHelper;
 import static org.hamcrest.Matchers.*;
 
 @Epic("Registration API")
-@Feature("Old User Registration")
+@Feature("User Registration Management")
 public class BarqRegisterTests extends BaseTest {
 
     private static String token;
 
     @BeforeAll
     public static void setup() {
-        // Generate a valid token before running the tests
         token = ApiHelper.loginAndGetToken("2054312802", "+966538772716");
     }
 
-    // ✅ Successful Registration
+    // ✅ Register New User Success
     @Test
-    @Story("Old User Sync Success")
-    @Severity(SeverityLevel.CRITICAL)
-    @Description("Verify successful registration of an old user")
-    public void testOldUserSyncSuccess() {
+    public void testRegisterNewUserSuccess() {
         ApiHelper.createRequestWithToken(token)
                 .contentType(ContentType.JSON)
-                .body("{\"nin\": \"2054312802\", \"terms_and_conditions\": true, \"terms_and_conditions_version\": \"1.1\"}")
-                .post("/v1/auth/old-user/register")
+                .body("{" +
+                        "\"national_id\": \"1234567890\", " +
+                        "\"georgian_birth_date\": \"1990-01-01\", " +
+                        "\"mobile\": \"+966512345678\", " +
+                        "\"id_expiration_date\": \"2030-01-01\", " +
+                        "\"id_issue_date\": \"2010-01-01\", " +
+                        "\"id_issue_place_code\": \"Riyadh\", " +
+                        "\"first_name_ar\": \"أحمد\", " +
+                        "\"first_name_en\": \"Ahmed\", " +
+                        "\"father_name_ar\": \"محمد\", " +
+                        "\"father_name_en\": \"Mohammed\", " +
+                        "\"terms_and_conditions\": true, " +
+                        "\"terms_and_conditions_version\": \"v1\"}")
+                .post("/v1/auth/register")
                 .then()
                 .statusCode(200)
+                .body("code", equalTo("partner-new-user-register"))
+                .body("message", equalTo("Successfully registered"))
                 .body("data.user_id", notNullValue());
     }
 
-    // ⚠️ User Already Synced
+    // 🚫 Register Old User - Already Synced
     @Test
-    @Story("Old User Already Synced")
-    @Severity(SeverityLevel.NORMAL)
-    @Description("Verify response when user is already synced")
-    public void testOldUserAlreadySynced() {
+    public void testRegisterOldUserAlreadySynced() {
         ApiHelper.createRequestWithToken(token)
                 .contentType(ContentType.JSON)
-                .body("{\"nin\": \"2054312802\"}")
+                .body("{" +
+                        "\"nin\": \"1234567890\", " +
+                        "\"terms_and_conditions\": true, " +
+                        "\"terms_and_conditions_version\": \"v1\"}")
                 .post("/v1/auth/old-user/register")
                 .then()
                 .statusCode(400)
                 .body("code", equalTo("user_already_synced"))
-                .body("message", equalTo("User already synced with this partner"));
+                .body("message", equalTo("user already synced with this partner"));
     }
 
-    // ❌ Validation Error (Empty Body)
+    // 🚫 Register New User - Invalid NIN
     @Test
-    @Story("Validation Error")
-    @Severity(SeverityLevel.CRITICAL)
-    @Description("Verify registration fails with empty request body")
-    public void testOldUserValidationError() {
+    public void testRegisterNewUserInvalidNIN() {
         ApiHelper.createRequestWithToken(token)
                 .contentType(ContentType.JSON)
-                .body("{}")
-                .post("/v1/auth/old-user/register")
+                .body("{" +
+                        "\"national_id\": \"invalidNIN\", " +
+                        "\"georgian_birth_date\": \"1990-01-01\", " +
+                        "\"mobile\": \"+966512345678\", " +
+                        "\"terms_and_conditions\": true, " +
+                        "\"terms_and_conditions_version\": \"v1\"}")
+                .post("/v1/auth/register")
                 .then()
                 .statusCode(400)
-                .body("code", equalTo("invalid_data"))
-                .body("message", equalTo("id_number is required"));
+                .body("code", equalTo("invalid_nin"))
+                .body("message", equalTo("Invalid National ID"));
     }
 
-    // 🔍 User Not Found
+    // 🚫 Register New User - Missing Terms
     @Test
-    @Story("User Not Found")
-    @Severity(SeverityLevel.NORMAL)
-    @Description("Verify registration fails for a non-existent user")
-    public void testOldUserNotFound() {
+    public void testRegisterNewUserMissingTerms() {
         ApiHelper.createRequestWithToken(token)
                 .contentType(ContentType.JSON)
-                .body("{\"nin\": \"2054312803\"}")
-                .post("/v1/auth/old-user/register")
-                .then()
-                .statusCode(400)
-                .body("code", equalTo("user_not_found"))
-                .body("message", equalTo("User not found"));
-    }
-
-    // 🚫 Missing Terms and Conditions
-    @Test
-    @Story("Missing Terms and Conditions")
-    @Severity(SeverityLevel.CRITICAL)
-    @Description("Verify registration fails without accepting terms")
-    public void testRegisterMissingTerms() {
-        ApiHelper.createRequestWithToken(token)
-                .contentType(ContentType.JSON)
-                .body("{\"nin\": \"2054312802\"}")
-                .post("/v1/auth/old-user/register")
+                .body("{" +
+                        "\"national_id\": \"1234567890\", " +
+                        "\"mobile\": \"+966512345678\", " +
+                        "\"terms_and_conditions\": false, " +
+                        "\"terms_and_conditions_version\": \"v1\"}")
+                .post("/v1/auth/register")
                 .then()
                 .statusCode(400)
                 .body("code", equalTo("terms_not_accepted"))
                 .body("message", equalTo("Terms and conditions must be accepted"));
     }
 
-    // 🟠 NIN with Minimum Digits
+    // 🚫 Register New User - Missing Fields
     @Test
-    @Story("Short NIN")
-    @Severity(SeverityLevel.NORMAL)
-    @Description("Verify registration fails with short NIN")
-    public void testRegisterShortNin() {
+    public void testRegisterNewUserMissingFields() {
         ApiHelper.createRequestWithToken(token)
                 .contentType(ContentType.JSON)
-                .body("{\"nin\": \"12345\", \"terms_and_conditions\": true, \"terms_and_conditions_version\": \"1.1\"}")
-                .post("/v1/auth/old-user/register")
+                .body("{}")
+                .post("/v1/auth/register")
                 .then()
                 .statusCode(400)
-                .body("code", equalTo("invalid_nin_format"))
-                .body("message", equalTo("NIN must be exactly 10 digits"));
-    }
-
-    // 🛡️ Edge Case: Excessively Long NIN
-    @Test
-    @Story("Excessively Long NIN")
-    @Severity(SeverityLevel.NORMAL)
-    @Description("Verify registration fails with a NIN longer than 10 digits")
-    public void testRegisterLongNin() {
-        ApiHelper.createRequestWithToken(token)
-                .contentType(ContentType.JSON)
-                .body("{\"nin\": \"12345678901234567890\", \"terms_and_conditions\": true, \"terms_and_conditions_version\": \"1.1\"}")
-                .post("/v1/auth/old-user/register")
-                .then()
-                .statusCode(400)
-                .body("code", equalTo("invalid_nin_format"))
-                .body("message", equalTo("NIN must be exactly 10 digits"));
+                .body("code", equalTo("invalid_data"))
+                .body("message", equalTo("Required fields are missing"));
     }
 }
+
