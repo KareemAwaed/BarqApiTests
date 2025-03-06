@@ -1,6 +1,10 @@
 package runners;
 
+import org.junit.platform.suite.api.*;
 
+@Suite
+@SelectPackages("test")
+@IncludeTags("smoke")
+@SuiteDisplayName("Smoke Test Suite")
 public class SmokeTestRunner {
-    // Run critical smoke tests (e.g., login, profile fetch)
 }

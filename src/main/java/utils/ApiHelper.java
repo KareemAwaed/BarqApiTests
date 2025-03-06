@@ -24,16 +24,26 @@ public class ApiHelper {
     private static TestData testData;
 
     static {
-        loadTestData();
+        loadTestDataFile();
     }
 
-    public static void loadTestData() {
+    public static void loadTestDataFile() {
         try (JsonReader reader = new JsonReader(new FileReader("src/test/resources/test-data.json"))) {
             testData = new Gson().fromJson(reader, TestData.class);
         } catch (FileNotFoundException e) {
             throw new RuntimeException("Test data file not found!", e);
         } catch (JsonIOException | JsonSyntaxException | IOException e) {
             throw new RuntimeException("Failed to load test data", e);
+        }
+    }
+
+    public static String loadTestDataFile(String fileName) {
+        try (JsonReader reader = new JsonReader(new FileReader("src/test/resources/" + fileName))) {
+            return new Gson().fromJson(reader, String.class);
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException("Test data file not found: " + fileName, e);
+        } catch (JsonIOException | JsonSyntaxException | IOException e) {
+            throw new RuntimeException("Failed to load test data file: " + fileName, e);
         }
     }
 
@@ -60,7 +70,7 @@ public class ApiHelper {
     }
 
     public static RequestSpecification createRequest() {
-        return createRequest(""); // Default to empty body
+        return createRequest("");
     }
 
     public static RequestSpecification createRequest(String body) {
@@ -68,16 +78,15 @@ public class ApiHelper {
         return createBaseRequest(API_KEY, signature);
     }
 
+    public static RequestSpecification createRequestWithoutHeaders() {
+        return RestAssured.given();
+    }
     public static RequestSpecification createRequestWithToken(String token) {
-        return createRequestWithToken(token, ""); // Default to empty body
+        return createRequestWithToken(token, "");
     }
 
     public static RequestSpecification createRequestWithToken(String token, String body) {
         return createRequest(body).header("Authorization", "Bearer " + token);
-    }
-
-    public static RequestSpecification createRequestWithTokenAndSignature(String token) {
-        return createRequestWithTokenAndSignature(token, ""); // Default to empty body
     }
 
     public static RequestSpecification createRequestWithTokenAndSignature(String token, String body) {
@@ -87,45 +96,32 @@ public class ApiHelper {
                 .header("Authorization", "Bearer " + token);
     }
 
+    public static RequestSpecification createRequestWithInvalidToken() {
+        return createRequest("").header("Authorization", "Bearer invalid_token");
+    }
+
     public static RequestSpecification createRequestWithInvalidSignature() {
         return createBaseRequest(API_KEY, "invalid_signature");
     }
 
     public static RequestSpecification createRequestWithoutApiKey() {
-        return createRequestWithoutApiKey(""); // Overloaded to handle no body
+        return createRequestWithoutApiKey("");
     }
 
     public static RequestSpecification createRequestWithoutApiKey(String body) {
         return RestAssured.given().header("X-SIGNATURE", generateSignature(body));
     }
 
-    public static RequestSpecification createRequestWithInvalidToken(String body) {
-        return createRequest(body).header("Authorization", "Bearer invalid_token");
-    }
-
-    public static RequestSpecification createRequestWithExpiredToken(String body) {
-        return createRequest(body).header("Authorization", "Bearer expired_token");
-    }
-
-    public static RequestSpecification createRequestWithoutHeaders() {
-        return RestAssured.given();
-    }
-
-    public static RequestSpecification createRequestWithLimitedPermissions(String body) {
-        return createBaseRequest("limited_api_key", generateSignature(body));
-    }
-
     public static String generateRandomMobile() {
-        return "+9665" + (int)(Math.random() * 100000000);
+        return "+9665" + (int) (Math.random() * 100000000);
     }
 
     public static String generateRandomNin() {
-        return String.format("%010d", (int)(Math.random() * 10000000000L));
+        return String.format("%010d", (int) (Math.random() * 10000000000L));
     }
 
     public static String loginAndGetToken(String nin, String mobile) {
-        User user = new User(nin, mobile);
-        String body = new Gson().toJson(user);
+        String body = createDynamicPayload(nin, mobile);
         Response response = createRequest(body)
                 .contentType("application/json")
                 .body(body)
@@ -156,39 +152,22 @@ public class ApiHelper {
             return nin;
         }
 
-        public void setNin(String nin) {
-            this.nin = nin;
-        }
-
         public String getMobile() {
             return mobile;
-        }
-
-        public void setMobile(String mobile) {
-            this.mobile = mobile;
         }
     }
 
     public static class TestData {
-        private String registeredNumber;
-        private String password;
-        private String nin;
-        private String dob;
+        private User validUser;
+        private User invalidUser;
 
-        public String getRegisteredNumber() {
-            return registeredNumber;
+        public User getValidUser() {
+            return validUser;
         }
 
-        public String getPassword() {
-            return password;
-        }
-
-        public String getNin() {
-            return nin;
-        }
-
-        public String getDob() {
-            return dob;
+        public User getInvalidUser() {
+            return invalidUser;
         }
     }
 }
+

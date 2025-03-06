@@ -3,6 +3,7 @@ package test;
 import io.restassured.http.ContentType;
 import io.qameta.allure.*;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import base.BaseTest;
 import utils.ApiHelper;
@@ -14,30 +15,25 @@ import static org.hamcrest.Matchers.*;
 public class BarqRegisterTests extends BaseTest {
 
     private static String token;
+    private static ApiHelper.User validUser;
+    private static ApiHelper.User invalidUser;
 
     @BeforeAll
     public static void setup() {
-        token = ApiHelper.loginAndGetToken("2054312802", "+966538772716");
+        validUser = ApiHelper.getTestData().getValidUser();
+        invalidUser = ApiHelper.getTestData().getInvalidUser();
+        token = ApiHelper.loginAndGetToken(validUser.getNin(), validUser.getMobile());
     }
 
-    // ✅ Register New User Success
     @Test
+    @Tag("smoke")
+    @Tag("regression")
     public void testRegisterNewUserSuccess() {
+        String requestBody = ApiHelper.loadTestDataFile("register-valid-user.json");
+
         ApiHelper.createRequestWithToken(token)
                 .contentType(ContentType.JSON)
-                .body("{" +
-                        "\"national_id\": \"1234567890\", " +
-                        "\"georgian_birth_date\": \"1990-01-01\", " +
-                        "\"mobile\": \"+966512345678\", " +
-                        "\"id_expiration_date\": \"2030-01-01\", " +
-                        "\"id_issue_date\": \"2010-01-01\", " +
-                        "\"id_issue_place_code\": \"Riyadh\", " +
-                        "\"first_name_ar\": \"أحمد\", " +
-                        "\"first_name_en\": \"Ahmed\", " +
-                        "\"father_name_ar\": \"محمد\", " +
-                        "\"father_name_en\": \"Mohammed\", " +
-                        "\"terms_and_conditions\": true, " +
-                        "\"terms_and_conditions_version\": \"v1\"}")
+                .body(requestBody)
                 .post("/v1/auth/register")
                 .then()
                 .statusCode(200)
@@ -46,13 +42,13 @@ public class BarqRegisterTests extends BaseTest {
                 .body("data.user_id", notNullValue());
     }
 
-    // 🚫 Register Old User - Already Synced
     @Test
+    @Tag("regression")
     public void testRegisterOldUserAlreadySynced() {
         ApiHelper.createRequestWithToken(token)
                 .contentType(ContentType.JSON)
                 .body("{" +
-                        "\"nin\": \"1234567890\", " +
+                        "\"nin\": \"" + validUser.getNin() + "\", " +
                         "\"terms_and_conditions\": true, " +
                         "\"terms_and_conditions_version\": \"v1\"}")
                 .post("/v1/auth/old-user/register")
@@ -62,17 +58,14 @@ public class BarqRegisterTests extends BaseTest {
                 .body("message", equalTo("user already synced with this partner"));
     }
 
-    // 🚫 Register New User - Invalid NIN
     @Test
+    @Tag("regression")
     public void testRegisterNewUserInvalidNIN() {
+        String requestBody = ApiHelper.loadTestDataFile("register-invalid-nin.json");
+
         ApiHelper.createRequestWithToken(token)
                 .contentType(ContentType.JSON)
-                .body("{" +
-                        "\"national_id\": \"invalidNIN\", " +
-                        "\"georgian_birth_date\": \"1990-01-01\", " +
-                        "\"mobile\": \"+966512345678\", " +
-                        "\"terms_and_conditions\": true, " +
-                        "\"terms_and_conditions_version\": \"v1\"}")
+                .body(requestBody)
                 .post("/v1/auth/register")
                 .then()
                 .statusCode(400)
@@ -80,16 +73,14 @@ public class BarqRegisterTests extends BaseTest {
                 .body("message", equalTo("Invalid National ID"));
     }
 
-    // 🚫 Register New User - Missing Terms
     @Test
+    @Tag("regression")
     public void testRegisterNewUserMissingTerms() {
+        String requestBody = ApiHelper.loadTestDataFile("register-missing-terms.json");
+
         ApiHelper.createRequestWithToken(token)
                 .contentType(ContentType.JSON)
-                .body("{" +
-                        "\"national_id\": \"1234567890\", " +
-                        "\"mobile\": \"+966512345678\", " +
-                        "\"terms_and_conditions\": false, " +
-                        "\"terms_and_conditions_version\": \"v1\"}")
+                .body(requestBody)
                 .post("/v1/auth/register")
                 .then()
                 .statusCode(400)
@@ -97,12 +88,14 @@ public class BarqRegisterTests extends BaseTest {
                 .body("message", equalTo("Terms and conditions must be accepted"));
     }
 
-    // 🚫 Register New User - Missing Fields
     @Test
+    @Tag("regression")
     public void testRegisterNewUserMissingFields() {
+        String requestBody = ApiHelper.loadTestDataFile("register-missing-fields.json");
+
         ApiHelper.createRequestWithToken(token)
                 .contentType(ContentType.JSON)
-                .body("{}")
+                .body(requestBody)
                 .post("/v1/auth/register")
                 .then()
                 .statusCode(400)

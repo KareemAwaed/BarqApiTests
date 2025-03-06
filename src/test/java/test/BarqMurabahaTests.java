@@ -3,6 +3,7 @@ package test;
 import io.restassured.http.ContentType;
 import io.qameta.allure.*;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import base.BaseTest;
 import utils.ApiHelper;
@@ -17,11 +18,16 @@ public class BarqMurabahaTests extends BaseTest {
 
     @BeforeAll
     public static void setup() {
-        token = ApiHelper.loginAndGetToken("2054312802", "+966538772716");
+        token = ApiHelper.loginAndGetToken(
+                ApiHelper.getTestData().getValidUser().getNin(),
+                ApiHelper.getTestData().getValidUser().getMobile()
+        );
     }
 
     // ✅ Get Murabaha Packages
     @Test
+    @Tag("smoke")
+    @Tag("regression")
     public void testGetMurabahaPackages() {
         ApiHelper.createRequestWithToken(token)
                 .get("/v1/murabha/packages/index")
@@ -30,10 +36,11 @@ public class BarqMurabahaTests extends BaseTest {
                 .body("data", not(empty()));
     }
 
-    // 🚫 Get Packages with Invalid Token
+    // ⛔ Get Packages with Invalid Token
     @Test
+    @Tag("regression")
     public void testGetMurabahaPackagesInvalidToken() {
-        ApiHelper.createRequestWithInvalidToken("invalid_token")
+        ApiHelper.createRequestWithInvalidToken()
                 .get("/v1/murabha/packages/index")
                 .then()
                 .statusCode(401)
@@ -42,6 +49,8 @@ public class BarqMurabahaTests extends BaseTest {
 
     // ✅ Get User's Orders
     @Test
+    @Tag("smoke")
+    @Tag("regression")
     public void testGetUserOrders() {
         ApiHelper.createRequestWithToken(token)
                 .get("/v1/murabha/deposit-order/index")
@@ -50,10 +59,11 @@ public class BarqMurabahaTests extends BaseTest {
                 .body("data", not(empty()));
     }
 
-    // 🚫 Get Orders with Invalid Token
+    // ⛔ Get Orders with Invalid Token
     @Test
+    @Tag("regression")
     public void testGetUserOrdersInvalidToken() {
-        ApiHelper.createRequestWithInvalidToken("invalid_token")
+        ApiHelper.createRequestWithInvalidToken()
                 .get("/v1/murabha/deposit-order/index")
                 .then()
                 .statusCode(401)
@@ -62,12 +72,14 @@ public class BarqMurabahaTests extends BaseTest {
 
     // ✅ Subscribe to Murabaha
     @Test
+    @Tag("smoke")
+    @Tag("regression")
     public void testSubscribeToMurabaha() {
+        String requestBody = ApiHelper.loadTestDataFile("murabaha-subscribe.json");
+
         ApiHelper.createRequestWithToken(token)
                 .contentType(ContentType.JSON)
-                .body("{" +
-                        "\"package_id\": 1, " +
-                        "\"amount\": 5000 }")
+                .body(requestBody)
                 .post("/v1/murabha/deposit-order/create")
                 .then()
                 .statusCode(201)
@@ -75,14 +87,15 @@ public class BarqMurabahaTests extends BaseTest {
                 .body("message", equalTo("تم حفظ البيانات بنجاح"));
     }
 
-    // 🚫 Subscribe with Invalid Token
+    // ⛔ Subscribe with Invalid Token
     @Test
+    @Tag("regression")
     public void testSubscribeWithInvalidToken() {
-        ApiHelper.createRequestWithInvalidToken("invalid_token")
+        String requestBody = ApiHelper.loadTestDataFile("murabaha-subscribe.json");
+
+        ApiHelper.createRequestWithInvalidToken()
                 .contentType(ContentType.JSON)
-                .body("{" +
-                        "\"package_id\": 1, " +
-                        "\"amount\": 5000 }")
+                .body(requestBody)
                 .post("/v1/murabha/deposit-order/create")
                 .then()
                 .statusCode(401)
@@ -91,6 +104,8 @@ public class BarqMurabahaTests extends BaseTest {
 
     // ✅ Cancel Murabaha Subscription
     @Test
+    @Tag("smoke")
+    @Tag("regression")
     public void testCancelMurabahaOrder() {
         ApiHelper.createRequestWithToken(token)
                 .post("/v1/murabha/deposit-order/cancel/1")
@@ -100,10 +115,11 @@ public class BarqMurabahaTests extends BaseTest {
                 .body("message", equalTo("تم حفظ البيانات بنجاح"));
     }
 
-    // 🚫 Cancel with Invalid Token
+    // ⛔ Cancel with Invalid Token
     @Test
+    @Tag("regression")
     public void testCancelOrderInvalidToken() {
-        ApiHelper.createRequestWithInvalidToken("invalid_token")
+        ApiHelper.createRequestWithInvalidToken()
                 .post("/v1/murabha/deposit-order/cancel/1")
                 .then()
                 .statusCode(401)
@@ -111,4 +127,3 @@ public class BarqMurabahaTests extends BaseTest {
     }
 }
 
-// This should now match 100% of the documentation — let me know if anything else needs to be refined! 🚀

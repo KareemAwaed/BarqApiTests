@@ -3,12 +3,28 @@
     "phone_number": "+966538772716",
     "password": "1111",
     "nin": "2054312802",
-    "dob": "1404-11-29"
+    "dob": "1404-11-29",
+    "national_id": "2054312802",
+    "georgian_birth_date": "1990-01-01",
+    "id_expiration_date": "2030-01-01",
+    "id_issue_date": "2010-01-01",
+    "id_issue_place_code": "Riyadh",
+    "first_name_ar": "أحمد",
+    "first_name_en": "Ahmed",
+    "father_name_ar": "محمد",
+    "father_name_en": "Mohammed",
+    "terms_and_conditions": true,
+    "terms_and_conditions_version": "v1"
   },
   "invalid_user": {
     "phone_number": "+966512345678",
     "password": "wrong_password",
     "nin": "1234567890",
-    "dob": "1990-01-01"
+    "dob": "1990-01-01",
+    "national_id": "invalidNIN",
+    "terms_and_conditions": false,
+    "terms_and_conditions_version": "v1",
+    "missing_fields": {}
   }
 }
+

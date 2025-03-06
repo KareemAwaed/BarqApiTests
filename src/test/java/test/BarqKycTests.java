@@ -3,6 +3,7 @@ package test;
 import io.restassured.http.ContentType;
 import io.qameta.allure.*;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import base.BaseTest;
 import utils.ApiHelper;
@@ -14,14 +15,19 @@ import static org.hamcrest.Matchers.*;
 public class BarqKycTests extends BaseTest {
 
     private static String token;
+    private static String validNin;
+    private static String validMobile;
 
     @BeforeAll
     public static void setup() {
-        token = ApiHelper.loginAndGetToken("2054312802", "+966538772716");
+        validNin = ApiHelper.getTestData().getValidUser().getNin();
+        validMobile = ApiHelper.getTestData().getValidUser().getMobile();
+        token = ApiHelper.loginAndGetToken(validNin, validMobile);
     }
 
-    // ✅ Fetch KYC Questions Successfully
     @Test
+    @Tag("smoke")
+    @Tag("regression")
     @Story("Fetch KYC Questions")
     @Severity(SeverityLevel.CRITICAL)
     @Description("Verify that KYC questions can be fetched successfully")
@@ -35,19 +41,27 @@ public class BarqKycTests extends BaseTest {
                 .body("data", notNullValue());
     }
 
-    // ✅ Submit KYC Answers Successfully
     @Test
+    @Tag("regression")
+    @Story("Fetch KYC Questions - Invalid Token")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Verify fetching KYC questions fails with an invalid token")
+    public void testFetchKYCQuestionsInvalidToken() {
+        ApiHelper.createRequestWithInvalidToken()
+                .get("/v1/profile/retail-kyc")
+                .then()
+                .statusCode(401)
+                .body("code", equalTo("invalid_token"));
+    }
+
+    @Test
+    @Tag("smoke")
+    @Tag("regression")
     @Story("Submit KYC Answers")
     @Severity(SeverityLevel.CRITICAL)
     @Description("Verify that KYC answers can be submitted successfully")
     public void testSubmitKYCAnswersSuccess() {
-        String requestBody = "{" +
-                "    \"answers\": [" +
-                "        {\"question_slug\": \"social_status\", \"answer\": \"married\", \"reset\": false}," +
-                "        {\"question_slug\": \"num_family_member\", \"answer\": \"2\", \"reset\": false}," +
-                "        {\"question_slug\": \"educational_lvl\", \"answer\": \"university\", \"reset\": false}" +
-                "    ]" +
-                "}";
+        String requestBody = ApiHelper.loadTestDataFile("kyc-valid-answers.json");
 
         ApiHelper.createRequestWithToken(token)
                 .contentType(ContentType.JSON)
@@ -59,17 +73,13 @@ public class BarqKycTests extends BaseTest {
                 .body("message", equalTo("Retail KYC answers sent successfully"));
     }
 
-    // 🚫 Submit KYC Answers - Invalid Answer
     @Test
-    @Story("Submit KYC Answers")
+    @Tag("regression")
+    @Story("Submit KYC Answers - Invalid Answer")
     @Severity(SeverityLevel.NORMAL)
     @Description("Verify that submitting an invalid answer returns an error")
     public void testSubmitInvalidKYCAnswer() {
-        String requestBody = "{" +
-                "    \"answers\": [" +
-                "        {\"question_slug\": \"social_status\", \"answer\": \"invalid_option\", \"reset\": false}" +
-                "    ]" +
-                "}";
+        String requestBody = ApiHelper.loadTestDataFile("kyc-invalid-answers.json");
 
         ApiHelper.createRequestWithToken(token)
                 .contentType(ContentType.JSON)
@@ -81,16 +91,30 @@ public class BarqKycTests extends BaseTest {
                 .body("message", equalTo("Invalid answer provided for question"));
     }
 
-    // ✅ Handle Webhook for KYC Status
     @Test
+    @Tag("regression")
+    @Story("Submit Empty KYC Answers")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Verify that submitting empty KYC answers returns an error")
+    public void testSubmitEmptyKYCAnswers() {
+        ApiHelper.createRequestWithToken(token)
+                .contentType(ContentType.JSON)
+                .body("{\"answers\": []}")
+                .post("/v1/profile/retail-kyc/send-answers")
+                .then()
+                .statusCode(400)
+                .body("code", equalTo("invalid_data"))
+                .body("message", equalTo("Answers array cannot be empty"));
+    }
+
+    @Test
+    @Tag("smoke")
+    @Tag("regression")
     @Story("Handle KYC Status Webhook")
     @Severity(SeverityLevel.NORMAL)
     @Description("Verify that the system handles the KYC status webhook correctly")
     public void testKYCStatusWebhook() {
-        String requestBody = "{" +
-                "    \"user_id\": \"173120407660036096\"," +
-                "    \"retail_kyc_status\": \"APPROVED\"" +
-                "}";
+        String requestBody = ApiHelper.loadTestDataFile("kyc-status-webhook.json");
 
         ApiHelper.createRequestWithToken(token)
                 .contentType(ContentType.JSON)
@@ -99,13 +123,23 @@ public class BarqKycTests extends BaseTest {
                 .then()
                 .statusCode(200);
     }
+
+    @Test
+    @Tag("regression")
+    @Story("Handle Invalid KYC Status in Webhook")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Verify that handling invalid KYC status in webhook returns an error")
+    public void testInvalidKYCStatusWebhook() {
+        String requestBody = ApiHelper.loadTestDataFile("kyc-invalid-status-webhook.json");
+
+        ApiHelper.createRequestWithToken(token)
+                .contentType(ContentType.JSON)
+                .body(requestBody)
+                .post("/partner-sync_kyc_status-endpoint")
+                .then()
+                .statusCode(400)
+                .body("code", equalTo("invalid_status"))
+                .body("message", equalTo("Invalid KYC status provided"));
+    }
 }
 
-/*✅ Fetch KYC Questions Successfully — /v1/profile/retail-kyc
-🚫 Fetch KYC Questions with Invalid Token — Invalid token handling.
-✅ Submit KYC Answers Successfully — /v1/profile/retail-kyc/send-answers
-🚫 Submit KYC Answers with Invalid Answer — Invalid answer validation.
-🚫 Submit KYC Answers without Authorization — Missing token handling.
-🚫 Submit Empty KYC Answers — Missing answers validation.
-✅ Handle KYC Status Webhook — /partner-sync_kyc_status-endpoint for status updates.
-🚫 Handle Invalid KYC Status in Webhook — Invalid status handling.*/

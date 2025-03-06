@@ -25,6 +25,13 @@
       <version>5.3.0</version>
     </dependency>
 
+    <!-- JUnit Platform Suite API for test runners -->
+    <dependency>
+      <groupId>org.junit.platform</groupId>
+      <artifactId>junit-platform-suite-api</artifactId>
+      <version>1.9.3</version>
+    </dependency>
+
     <!-- JSON parsing -->
     <dependency>
       <groupId>org.json</groupId>

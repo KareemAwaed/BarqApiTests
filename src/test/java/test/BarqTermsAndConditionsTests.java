@@ -3,6 +3,7 @@ package test;
 import io.restassured.http.ContentType;
 import io.qameta.allure.*;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import base.BaseTest;
 import utils.ApiHelper;
@@ -14,11 +15,16 @@ import static org.hamcrest.Matchers.*;
 public class BarqTermsAndConditionsTests extends BaseTest {
 
     private static String token;
+    private static String validNin;
+    private static String validMobile;
     private static String latestTermsVersion;
 
     @BeforeAll
     public static void setup() {
-        token = ApiHelper.loginAndGetToken("2054312802", "+966538772716");
+        validNin = ApiHelper.getTestData().getValidUser().getNin();
+        validMobile = ApiHelper.getTestData().getValidUser().getMobile();
+        token = ApiHelper.loginAndGetToken(validNin, validMobile);
+
 
         // Fetch latest terms and conditions version
         latestTermsVersion = ApiHelper.createRequestWithToken(token)
@@ -30,6 +36,8 @@ public class BarqTermsAndConditionsTests extends BaseTest {
 
     // ✅ Get Latest Terms & Conditions
     @Test
+    @Tag("smoke")
+    @Tag("regression")
     public void testGetLatestTermsAndConditions() {
         ApiHelper.createRequestWithToken(token)
                 .post("/v1/profile/terms-and-conditions/latest")
@@ -42,6 +50,7 @@ public class BarqTermsAndConditionsTests extends BaseTest {
 
     // 🚫 Get Latest Terms without Token
     @Test
+    @Tag("regression")
     public void testGetLatestTermsWithoutToken() {
         ApiHelper.createRequest()
                 .post("/v1/profile/terms-and-conditions/latest")
@@ -52,6 +61,8 @@ public class BarqTermsAndConditionsTests extends BaseTest {
 
     // ✅ Accept Terms & Conditions Success
     @Test
+    @Tag("smoke")
+    @Tag("regression")
     public void testAcceptTermsAndConditionsSuccess() {
         ApiHelper.createRequestWithToken(token)
                 .contentType(ContentType.JSON)
@@ -65,6 +76,7 @@ public class BarqTermsAndConditionsTests extends BaseTest {
 
     // 🚫 Accept Terms & Conditions - Invalid Version
     @Test
+    @Tag("regression")
     public void testAcceptTermsAndConditionsInvalidVersion() {
         ApiHelper.createRequestWithToken(token)
                 .contentType(ContentType.JSON)
@@ -79,6 +91,7 @@ public class BarqTermsAndConditionsTests extends BaseTest {
 
     // 🚫 Accept Terms without Token
     @Test
+    @Tag("regression")
     public void testAcceptTermsWithoutToken() {
         ApiHelper.createRequest()
                 .contentType(ContentType.JSON)
@@ -91,4 +104,3 @@ public class BarqTermsAndConditionsTests extends BaseTest {
     }
 }
 
-// This now fully covers **Terms & Conditions** — including missing tokens, invalid versions, and all necessary success scenarios. 🚀
