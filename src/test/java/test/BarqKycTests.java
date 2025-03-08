@@ -108,38 +108,121 @@ public class BarqKycTests extends BaseTest {
     }
 
     @Test
-    @Tag("smoke")
     @Tag("regression")
-    @Story("Handle KYC Status Webhook")
+    @Story("Submit Duplicate KYC Answers")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Verify that the system handles the KYC status webhook correctly")
-    public void testKYCStatusWebhook() {
-        String requestBody = ApiHelper.loadTestDataFile("kyc-status-webhook.json");
+    @Description("Verify that submitting duplicate answers for the same question returns an error")
+    public void testSubmitDuplicateKYCAnswers() {
+        String requestBody = "{\"answers\": [\n  { \"question_id\": 1, \"answer\": \"Yes\" },\n  { \"question_id\": 1, \"answer\": \"No\" }\n]}";
 
         ApiHelper.createRequestWithToken(token)
                 .contentType(ContentType.JSON)
                 .body(requestBody)
-                .post("/partner-sync_kyc_status-endpoint")
+                .post("/v1/profile/retail-kyc/send-answers")
                 .then()
-                .statusCode(200);
+                .statusCode(400)
+                .body("code", equalTo("duplicate_question_id"))
+                .body("message", equalTo("Duplicate answers for the same question ID"));
     }
 
     @Test
     @Tag("regression")
-    @Story("Handle Invalid KYC Status in Webhook")
+    @Story("Submit Partial KYC Answers")
     @Severity(SeverityLevel.NORMAL)
-    @Description("Verify that handling invalid KYC status in webhook returns an error")
-    public void testInvalidKYCStatusWebhook() {
-        String requestBody = ApiHelper.loadTestDataFile("kyc-invalid-status-webhook.json");
+    @Description("Verify that submitting incomplete KYC answers returns an error")
+    public void testSubmitPartialKYCAnswers() {
+        String requestBody = "{\"answers\": [{ \"question_id\": 1, \"answer\": \"Yes\" }]}";
 
         ApiHelper.createRequestWithToken(token)
                 .contentType(ContentType.JSON)
                 .body(requestBody)
-                .post("/partner-sync_kyc_status-endpoint")
+                .post("/v1/profile/retail-kyc/send-answers")
                 .then()
                 .statusCode(400)
-                .body("code", equalTo("invalid_status"))
-                .body("message", equalTo("Invalid KYC status provided"));
+                .body("code", equalTo("incomplete_answers"))
+                .body("message", equalTo("Some required questions are missing"));
     }
-}
 
+    @Test
+    @Tag("regression")
+    @Story("Submit Invalid Question ID")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Verify that submitting an invalid question ID returns an error")
+    public void testSubmitInvalidQuestionId() {
+        String requestBody = "{\"answers\": [{ \"question_id\": 9999, \"answer\": \"Yes\" }]}";
+
+        ApiHelper.createRequestWithToken(token)
+                .contentType(ContentType.JSON)
+                .body(requestBody)
+                .post("/v1/profile/retail-kyc/send-answers")
+                .then()
+                .statusCode(400)
+                .body("code", equalTo("invalid_question_id"))
+                .body("message", equalTo("Invalid question ID provided"));
+    }
+
+    @Test
+    @Tag("regression")
+    @Story("Submit KYC Answers with Invalid Format")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Verify that submitting answers with an invalid format returns an error")
+    public void testSubmitInvalidFormatKYCAnswers() {
+        String requestBody = "{\"answers\": [{ \"question_id\": 1, \"answer\": 12345 }]}";
+
+        ApiHelper.createRequestWithToken(token)
+                .contentType(ContentType.JSON)
+                .body(requestBody)
+                .post("/v1/profile/retail-kyc/send-answers")
+                .then()
+                .statusCode(400)
+                .body("code", equalTo("invalid_answer_format"))
+                .body("message", equalTo("Answer must be a string"));
+    }
+    @Test
+    @Tag("regression")
+    @Story("Submit KYC Answers with Expired Token")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Verify that submitting KYC answers with an expired token returns an error")
+    public void testSubmitKYCAnswersExpiredToken() {
+        String requestBody = ApiHelper.loadTestDataFile("kyc-valid-answers.json");
+
+        ApiHelper.createRequestWithExpiredToken()
+                .contentType(ContentType.JSON)
+                .body(requestBody)
+                .post("/v1/profile/retail-kyc/send-answers")
+                .then()
+                .statusCode(401)
+                .body("code", equalTo("token_expired"))
+                .body("message", equalTo("Access token has expired"));
+    }
+
+    @Test
+    @Tag("regression")
+    @Story("Submit KYC Answers with Large Payload")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Verify that submitting an excessively large payload returns an error")
+    public void testSubmitKYCAnswersLargePayload() {
+        String requestBody = ApiHelper.generateLargePayload();
+
+        ApiHelper.createRequestWithToken(token)
+                .contentType(ContentType.JSON)
+                .body(requestBody)
+                .post("/v1/profile/retail-kyc/send-answers")
+                .then()
+                .statusCode(413)
+                .body("code", equalTo("payload_too_large"))
+                .body("message", equalTo("Request payload is too large"));
+    }
+    @Test
+    @Tag("regression")
+    public void testSubmitKYCAnswersWithUnauthorizedAccess() {
+        ApiHelper.createRequestWithoutToken()
+                .contentType(ContentType.JSON)
+                .body(ApiHelper.loadTestDataFile("kyc-valid-answers.json"))
+                .post("/v1/profile/retail-kyc/send-answers")
+                .then()
+                .statusCode(401)
+                .body("code", equalTo("unauthorized"));
+    }
+
+}

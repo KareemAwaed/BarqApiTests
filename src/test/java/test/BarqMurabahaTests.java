@@ -125,5 +125,89 @@ public class BarqMurabahaTests extends BaseTest {
                 .statusCode(401)
                 .body("code", equalTo("invalid_token"));
     }
+    // ⛔ Get Packages with Expired Token
+    @Test
+    @Tag("regression")
+    public void testGetMurabahaPackagesExpiredToken() {
+        ApiHelper.createRequestWithExpiredToken()
+                .get("/v1/murabha/packages/index")
+
+                .then()
+                .statusCode(401)
+                .body("code", equalTo("token_expired"))
+                .body("message", equalTo("Access token has expired"));
+    }
+
+    // 🚫 Create Order with Invalid Package ID
+    @Test
+    @Tag("regression")
+    public void testCreateOrderInvalidPackageId() {
+        String requestBody = "{\"package_statement_id\": 9999, \"amount\": 1000}";
+
+        ApiHelper.createRequestWithToken(token)
+                .contentType(ContentType.JSON)
+                .body(requestBody)
+                .post("/v1/murabha/deposit-order/create")
+                .then()
+                .statusCode(400)
+                .body("code", equalTo("invalid_package_id"))
+                .body("message", equalTo("Package ID is invalid"));
+    }
+
+    // 🚫 Create Order with Excessive Amount
+    @Test
+    @Tag("regression")
+    public void testCreateOrderExcessiveAmount() {
+        String requestBody = "{\"package_statement_id\": 1, \"amount\": 1000000000}";
+
+        ApiHelper.createRequestWithToken(token)
+                .contentType(ContentType.JSON)
+                .body(requestBody)
+                .post("/v1/murabha/deposit-order/create")
+                .then()
+                .statusCode(400)
+                .body("code", equalTo("invalid_amount"))
+                .body("message", equalTo("Amount exceeds the allowed maximum limit"));
+    }
+
+    // 🚫 Fetch Order Details with Non-existent ID
+    @Test
+    @Tag("regression")
+    public void testFetchOrderDetailsNonExistentId() {
+        ApiHelper.createRequestWithToken(token)
+                .get("/v1/murabha/deposit-order/show/9999")
+                .then()
+                .statusCode(404)
+                .body("code", equalTo("order_not_found"))
+                .body("message", equalTo("Order not found"));
+    }
+    @Test
+    @Tag("regression")
+    public void testCancelSubscriptionAlreadyCanceledOrder() {
+        ApiHelper.createRequestWithToken(token)
+                .post("/v1/murabha/deposit-order/cancel/1")
+                .then()
+                .statusCode(400)
+                .body("code", equalTo("order_already_canceled"));
+    }
+    @Test
+    @Tag("regression")
+    public void testFetchOrderListWithInvalidParameters() {
+        ApiHelper.createRequestWithToken(token)
+                .get("/v1/murabha/deposit-order/index?page=-1&limit=2000")
+                .then()
+                .statusCode(400)
+                .body("code", equalTo("invalid_parameters"));
+    }
+
+    @Test
+    @Tag("regression")
+    public void testMurabahaPackageWithInvalidQueryParams() {
+        ApiHelper.createRequestWithToken(token)
+                .get("/v1/murabha/packages/index?sort=unknown")
+                .then()
+                .statusCode(400)
+                .body("code", equalTo("invalid_query_parameters"));
+    }
 }
 

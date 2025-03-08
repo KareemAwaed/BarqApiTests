@@ -17,7 +17,7 @@ public class ApiConfig {
     }
 
     public static String getBaseUrl() {
-        return properties.getProperty("base.url");
+        return properties.getProperty("base.url", "https://apisix-gateway-barq-dev.awaed.cloud"); // Add default URL
     }
 
     public static String getApiKey() {

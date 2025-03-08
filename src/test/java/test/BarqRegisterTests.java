@@ -102,5 +102,82 @@ public class BarqRegisterTests extends BaseTest {
                 .body("code", equalTo("invalid_data"))
                 .body("message", equalTo("Required fields are missing"));
     }
-}
 
+    // New test cases based on recommendations
+
+    @Test
+    @Tag("regression")
+    public void testRegisterWithExpiredToken() {
+        ApiHelper.createRequestWithExpiredToken()
+                .contentType(ContentType.JSON)
+                .body(ApiHelper.loadTestDataFile("register-valid-user.json"))
+                .post("/v1/auth/register")
+                .then()
+                .statusCode(401)
+                .body("code", equalTo("token_expired"))
+                .body("message", equalTo("Access token has expired"));
+    }
+
+    @Test
+    @Tag("regression")
+    public void testRegisterWithInvalidTermsVersion() {
+        ApiHelper.createRequestWithToken(token)
+                .contentType(ContentType.JSON)
+                .body("{" +
+                        "\"nin\": \"" + validUser.getNin() + "\", " +
+                        "\"terms_and_conditions\": true, " +
+                        "\"terms_and_conditions_version\": \"invalid_version\"}")
+                .post("/v1/auth/register")
+                .then()
+                .statusCode(400)
+                .body("code", equalTo("invalid_terms_version"))
+                .body("message", equalTo("Invalid terms and conditions version"));
+    }
+
+    @Test
+    @Tag("regression")
+    public void testRegisterWithExcessivePayload() {
+        String requestBody = ApiHelper.generateLargePayload();
+
+        ApiHelper.createRequestWithToken(token)
+                .contentType(ContentType.JSON)
+                .body(requestBody)
+                .post("/v1/auth/register")
+                .then()
+                .statusCode(413)
+                .body("code", equalTo("payload_too_large"))
+                .body("message", equalTo("Request payload is too large"));
+    }
+
+    @Test
+    @Tag("regression")
+    public void testRegisterWithMobileAlreadyExists() {
+        ApiHelper.createRequestWithToken(token)
+                .contentType(ContentType.JSON)
+                .body(ApiHelper.loadTestDataFile("register-duplicate-mobile.json"))
+                .post("/v1/auth/register")
+                .then()
+                .statusCode(400)
+                .body("code", equalTo("mobile_already_exists"));
+    }
+    @Test
+    @Tag("regression")
+    public void testRegisterWithInvalidIdExpirationDate() {
+        ApiHelper.createRequestWithToken(token)
+                .contentType(ContentType.JSON)
+                .body(ApiHelper.loadTestDataFile("register-invalid-expiration-date.json"))
+                .post("/v1/auth/register")
+                .then()
+                .statusCode(400)
+                .body("code", equalTo("invalid_expiration_date"));
+    }
+    @Test
+    @Tag("regression")
+    public void testRegisterWithUnsupportedMethod() {
+        ApiHelper.createRequestWithToken(token)
+                .get("/v1/auth/register")
+                .then()
+                .statusCode(405)
+                .body("code", equalTo("method_not_allowed"));
+    }
+}

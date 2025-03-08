@@ -60,42 +60,86 @@ public class BarqAuthTests extends BaseTest {
                 .body("data.access_token", notNullValue());
     }
 
-    // 🚫 Login with non-existent user — Regression Only
+    // 🚫 Login with expired token
     @Test
     @Tag("regression")
-    @Story("Login with non-existent user")
-    @Severity(SeverityLevel.NORMAL)
-    @Description("Verify response when trying to log in with a non-existent user")
-    public void testLoginWithNonExistentUser() {
-        ApiHelper.createRequest()
-                .contentType(ContentType.JSON)
-                .body(ApiHelper.createDynamicPayload(INVALID_NIN, INVALID_MOBILE))
+    @Story("Login with expired token")
+    @Severity(SeverityLevel.CRITICAL)
+    @Description("Verify that login fails with an expired token")
+    public void testLoginWithExpiredToken() {
+        ApiHelper.createRequestWithExpiredToken()
                 .post("/v1/auth/login")
                 .then()
-                .statusCode(400)
-                .body("code", equalTo("user_not_found"))
-                .body("message", equalTo("User not found"));
+                .statusCode(401)
+                .body("code", equalTo("token_expired"))
+                .body("message", equalTo("Token has expired"));
     }
 
-    // 🚫 Invalid Password — Regression Only
+    // 🚫 Login with partially correct credentials
     @Test
     @Tag("regression")
-    @Story("Login with invalid password")
-    @Severity(SeverityLevel.CRITICAL)
-    @Description("Verify that login fails with invalid password")
-    public void testLoginWithInvalidPassword() {
+    @Story("Login with partially correct credentials")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Verify that login fails with valid NIN but incorrect DOB")
+    public void testLoginWithPartiallyCorrectCredentials() {
         ApiHelper.createRequest()
                 .contentType(ContentType.JSON)
                 .body("{" +
                         "\"nin\": \"" + REGISTERED_NIN + "\", " +
                         "\"mobile\": \"" + REGISTERED_MOBILE + "\", " +
-                        "\"password\": \"wrongpass\", " +
+                        "\"password\": \"1111\", " +
+                        "\"dob\": \"9999-12-31\"}")
+                .post("/v1/auth/login")
+                .then()
+                .statusCode(400)
+                .body("code", equalTo("invalid_dob"))
+                .body("message", equalTo("Invalid date of birth"));
+    }
+
+    // 🚫 Exceedingly long NIN or mobile number
+    @Test
+    @Tag("regression")
+    @Story("Login with excessively long NIN or mobile number")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Verify that login fails with excessively long NIN or mobile number")
+    public void testLoginWithExcessivelyLongNinOrMobile() {
+        ApiHelper.createRequest()
+                .contentType(ContentType.JSON)
+                .body("{" +
+                        "\"nin\": \"12345678901234567890\", " +
+                        "\"mobile\": \"+966512345678901234567890\", " +
+                        "\"password\": \"1111\", " +
                         "\"dob\": \"1404-11-29\"}")
                 .post("/v1/auth/login")
                 .then()
-                .statusCode(401)
-                .body("code", equalTo("invalid_password"))
-                .body("message", equalTo("Invalid password"));
+                .statusCode(400)
+                .body("code", equalTo("invalid_data_format"))
+                .body("message", equalTo("NIN and mobile number must follow the correct length"));
     }
-}
 
+    @Test
+    @Tag("regression")
+    public void testLoginWithoutRequiredFields() {
+        ApiHelper.createRequest()
+                .contentType(ContentType.JSON)
+                .body("{}")
+                .post("/v1/auth/login")
+                .then()
+                .statusCode(400)
+                .body("code", equalTo("missing_required_fields"));
+    }
+
+    @Test
+    @Tag("regression")
+    public void testLoginWithIncorrectPassword() {
+        ApiHelper.createRequest()
+                .contentType(ContentType.JSON)
+                .body("{\"nin\": \"" + REGISTERED_NIN + "\", \"password\": \"wrongPassword\"}")
+                .post("/v1/auth/login")
+                .then()
+                .statusCode(401)
+                .body("code", equalTo("invalid_credentials"));
+    }
+
+
+}

@@ -4,7 +4,9 @@ import com.google.gson.Gson;
 import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.stream.JsonReader;
+import config.ApiConfig;
 import io.restassured.RestAssured;
+import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import io.restassured.specification.RequestSpecification;
 
@@ -47,9 +49,19 @@ public class ApiHelper {
         }
     }
 
+    public static RequestSpecification createRequestWithoutToken() {
+        return RestAssured.given()
+                .baseUri(ApiConfig.getBaseUrl()) // Use the base URL from your config
+                .contentType(ContentType.JSON);
+    }
+
+
+
     public static TestData getTestData() {
         return testData;
     }
+
+
 
     public static String generateSignature(String body) {
         try {
@@ -132,6 +144,23 @@ public class ApiHelper {
         } else {
             throw new RuntimeException("Failed to get access token: " + response.getBody().asString());
         }
+    }
+
+    // 🛠️ Generate large payload for testing
+    public static String generateLargePayload() {
+        StringBuilder payload = new StringBuilder("{\"answers\": [");
+        for (int i = 0; i < 10000; i++) {
+            payload.append("{\"question_id\": ").append(i).append(", \"answer\": \"Test Answer ").append(i).append("\"},");
+        }
+        payload.deleteCharAt(payload.length() - 1); // Remove last comma
+        payload.append("]}");
+        return payload.toString();
+    }
+
+    // 🚫 Create a request with an expired token
+    public static RequestSpecification createRequestWithExpiredToken() {
+        return createRequest()
+                .header("Authorization", "Bearer expired_token");
     }
 
     public static String createDynamicPayload(String nin, String mobile) {

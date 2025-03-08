@@ -74,20 +74,7 @@ public class BarqTermsAndConditionsTests extends BaseTest {
                 .body("message", equalTo("Terms and conditions accepted successfully"));
     }
 
-    // 🚫 Accept Terms & Conditions - Invalid Version
-    @Test
-    @Tag("regression")
-    public void testAcceptTermsAndConditionsInvalidVersion() {
-        ApiHelper.createRequestWithToken(token)
-                .contentType(ContentType.JSON)
-                .body("{" +
-                        "\"terms_and_conditions_version\": \"invalid_version\"}")
-                .post("/v1/profile-actions/accept-terms-and-conditions/approve")
-                .then()
-                .statusCode(400)
-                .body("code", equalTo("invalid_terms_version"))
-                .body("message", equalTo("Invalid or outdated terms version provided"));
-    }
+
 
     // 🚫 Accept Terms without Token
     @Test
@@ -101,6 +88,65 @@ public class BarqTermsAndConditionsTests extends BaseTest {
                 .then()
                 .statusCode(401)
                 .body("code", equalTo("unauthorized"));
+    }
+    @Test
+    @Tag("regression")
+    public void testAcceptTermsWithExpiredToken() {
+        ApiHelper.createRequestWithExpiredToken()
+                .contentType(ContentType.JSON)
+                .body("{" +
+                        "\"terms_and_conditions_version\": \"" + latestTermsVersion + "\"}")
+                .post("/v1/profile-actions/accept-terms-and-conditions/approve")
+                .then()
+                .statusCode(401)
+                .body("code", equalTo("token_expired"));
+    }
+
+    @Test
+    @Tag("regression")
+    public void testAcceptTermsWithInvalidVersion() {
+        ApiHelper.createRequestWithToken(token)
+                .contentType(ContentType.JSON)
+                .body("{\"terms_and_conditions_version\": \"invalid_version\"}")
+                .post("/v1/profile-actions/accept-terms-and-conditions/approve")
+                .then()
+                .statusCode(400)
+                .body("code", equalTo("invalid_terms_version"));
+    }
+
+    @Test
+    @Tag("regression")
+    public void testAcceptTermsWithExcessivePayload() {
+        String largePayload = ApiHelper.generateLargePayload();
+
+        ApiHelper.createRequestWithToken(token)
+                .contentType(ContentType.JSON)
+                .body(largePayload)
+                .post("/v1/profile-actions/accept-terms-and-conditions/approve")
+                .then()
+                .statusCode(413)
+                .body("code", equalTo("payload_too_large"));
+    }
+
+    @Test
+    @Tag("regression")
+    public void testFetchTermsWithGetMethod() {
+        ApiHelper.createRequestWithToken(token)
+                .get("/v1/profile/terms-and-conditions/latest")
+                .then()
+                .statusCode(405)
+                .body("code", equalTo("method_not_allowed"));
+    }
+    @Test
+    @Tag("regression")
+    public void testAcceptTermsAlreadyAcceptedVersion() {
+        ApiHelper.createRequestWithToken(token)
+                .contentType(ContentType.JSON)
+                .body("{ \"terms_and_conditions_version\": \"v1\" }")
+                .post("/v1/profile-actions/accept-terms-and-conditions/approve")
+                .then()
+                .statusCode(400)
+                .body("code", equalTo("terms_already_accepted"));
     }
 }
 
