@@ -84,7 +84,7 @@ Title: Add API tests for user registration
 Description: Added positive and negative test cases for the /register endpoint
 ```
 
-## 📄 License
+## 📄 Test plan : https://www.notion.so/awaed-tech/Barq-Test-Plan-1b92bd88c0648078b859d8fc215ab2de?pvs=4
 This project is licensed under the MIT License.
 
 
